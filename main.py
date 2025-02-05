@@ -181,8 +181,7 @@ class Simulation:
             weights = [self.calculateFitness(genome) / fitnessSum for genome in self.population]
     
         for i in range(populationSize):
-            parents = r.choices(self.population, weights=weights, k=2)
-            parent1, parent2 = parents
+            parent1, parent2 = r.choices(self.population, weights=weights, k=2)
             child = parent1.crossover(parent2)
             self.mutate(child)
             newPopulation.append(child)
