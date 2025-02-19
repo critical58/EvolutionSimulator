@@ -7,8 +7,10 @@ from datetime import date as d
 def clear():
     print("\033[H\033[2J", end="")
 
+
 def continueText():
     input('Press "ENTER" to continue\n>>> ')
+
 
 def createFolders():
     folders = ["Save", "Load", "Results"]
@@ -18,128 +20,260 @@ def createFolders():
 
 
 class GeneticEntity:
-    def __init__(self, symbol: chr, descriptors: list):
-        self.symbol = symbol
-        self.descriptors = descriptors
+    def __init__(self, symbol, descriptors):
+        self._symbol = symbol
+        self._descriptors = descriptors
 
-    def getGeneticSequence(self, geneticID: str):
-        return "".join(self.symbol.upper() if int(digit) else self.symbol.lower() for digit in geneticID)
+    def getSymbol(self):
+        return self._symbol
+
+    def getDescriptors(self):
+        return self._descriptors
+
+    def _getGeneticSequence(self, geneticID):
+        return "".join(self._symbol.upper() if int(digit) else self._symbol.lower() for digit in geneticID)
+
+    def getGeneticSequence(self, geneticID):
+        return self._getGeneticSequence(geneticID)
 
 
 class Phenotype(GeneticEntity):
-    def __init__(self, trait: str, symbol: chr, descriptors: list):
+    def __init__(self, trait, symbol, descriptors):
         super().__init__(symbol, descriptors)
-        self.trait = trait
+        self.__trait = trait
 
-    def createGenotype(self, configuration: str):
-        return Genotype(configuration, self.symbol, self.descriptors)
+    def getTrait(self):
+        return self.__trait
+
+    def createGenotype(self, configuration):
+        return Genotype(configuration, self.getSymbol(), self.getDescriptors())
 
 
 class Genotype(GeneticEntity):
-    def __init__(self, geneticID: str, symbol: chr, descriptors: list):
+    def __init__(self, geneticID, symbol, descriptors):
         super().__init__(symbol, descriptors)
-        self.geneticID = geneticID
+        self.__geneticID = geneticID
 
     def getGeneticID(self):
-        return self.getGeneticSequence(self.geneticID)
+        return self.__geneticID
+
+    def setGeneticID(self, value):
+        self.__geneticID = value
+
+    def getGeneticSequenceID(self):
+        return self._getGeneticSequence(self.__geneticID)
 
     def getTrait(self):
-        if self.geneticID == "11" or self.geneticID == "10":
-            traitValue = 1  # Stronger descriptor
-        elif self.geneticID == "00":
-            traitValue = 0  # Weaker descriptor
+        if self.__geneticID in ("11", "10"):
+            traitValue = 1
+        elif self.__geneticID == "00":
+            traitValue = 0
         else:
-            traitValue = -1  # Undefined case
+            traitValue = -1
 
-        # Ensure traitValue is valid (DEBUG)
-        if 0 <= traitValue < len(self.descriptors):
-            return self.descriptors[traitValue]
-        else:
-            print(self.descriptors)
-            return "?"
-    
+        if 0 <= traitValue < len(self._descriptors):
+            return self._descriptors[traitValue]
+        return "?"
+
     def display(self):
-        print(f"{self.getGeneticID()} ({self.getTrait()})")
+        print(f"{self.getGeneticSequenceID()} ({self.getTrait()})")
 
 
 class Genome:
-    def __init__(self, genotypes: list, phenotypes: list):
-        self.genotypes = genotypes
-        self.phenotypes = phenotypes
+    def __init__(self, genotypes, phenotypes):
+        self.__genotypes = genotypes
+        self.__phenotypes = phenotypes
+
+    def getGenotypes(self):
+        return self.__genotypes
+
+    def getPhenotypes(self):
+        return self.__phenotypes
 
     def display(self):
-        for genotype in self.genotypes:
+        for genotype in self.__genotypes:
             genotype.display()
 
-    def normaliseID(self, geneticID: str):
+    @staticmethod
+    def _normaliseID(geneticID):
         return "10" if geneticID == "01" else geneticID
 
     def crossover(self, parent):
-        childGeneticIDs = [r.choice([self.normaliseID(allele1 + allele2) for allele1 in self.genotypes[element].geneticID for allele2 in parent.genotypes[element].geneticID]) for element in range(len(self.genotypes))]
-        childGenotypes = [self.phenotypes[element].createGenotype(childGeneticIDs[element]) for element in range(len(self.genotypes))]
-        return Genome(childGenotypes, self.phenotypes)
+        childGeneticIDs = [r.choice([self._normaliseID(a1 + a2)
+                           for a1 in self.__genotypes[i].getGeneticID()
+                           for a2 in parent.getGenotypes()[i].getGeneticID()])
+                           for i in range(len(self.__genotypes))]
+
+        childGenotypes = [self.__phenotypes[i].createGenotype(childGeneticIDs[i]) for i in range(len(self.__genotypes))]
+        return Genome(childGenotypes, self.__phenotypes)
+
 
 class Simulation:
-    def __init__(self, mutationRate: float, phenotypes: list, elitismRate: float, initialPopulationSize: int, simName: str, genNum: int):
-        self.mutationRate = mutationRate
-        self.simName = simName 
-        self.phenotypes = phenotypes
-        self.elitismRate = elitismRate
-        self.population = self.initialisePopulation(initialPopulationSize) 
-        self.generation = 0
-        self.genNum = genNum
-        self.data = []
-        self.parameters = {
-            "Mutation Rate": mutationRate, 
-            "Elitism Rate": elitismRate,
-            "Initial Population Size": initialPopulationSize,
-            "Number of Generations": genNum
-        }
-    
-    def initialisePopulation(self, size: int): 
-        population = [] 
-        for i in range(size): 
-            genotypes = [phenotype.createGenotype(self.randomGeneticID()) for phenotype in self.phenotypes]
-            genome = Genome(genotypes, self.phenotypes) 
-            population.append(genome) 
-        return population 
-    
-    def randomGeneticID(self): 
+    def __init__(self, mutationRate, phenotypes, elitismRate, initialPopulationSize, simName, genNum):
+        self.__mutationRate = mutationRate
+        self.__simName = simName
+        self.__phenotypes = phenotypes
+        self.__elitismRate = elitismRate
+        self.__initialPopulationSize = initialPopulationSize
+        self.__population = self.__initialisePopulation(initialPopulationSize)
+        self.__generation = 0
+        self.__genNum = genNum
+        self.__data = []
+        self.__parameters = {"mutationRate": mutationRate, "elitismRate": elitismRate, "initialPopulationSize": initialPopulationSize, "genNum": genNum}
+
+    def getMutationRate(self):
+        return self.__mutationRate
+
+    def getSimName(self):
+        return self.__simName
+
+    def getPhenotypes(self):
+        return self.__phenotypes
+
+    def getElitismRate(self):
+        return self.__elitismRate
+
+    def getInitialPopulationSize(self):
+        return self.__initialPopulationSize
+
+    def getPopulation(self):
+        return self.__population
+
+    def getGeneration(self):
+        return self.__generation
+
+    def getGenNum(self):
+        return self.__genNum
+
+    def getData(self):
+        return self.__data
+
+    def getParameters(self):
+        return self.__parameters
+
+    def setPopulation(self, population):
+        self.__population = population
+
+    def __initialisePopulation(self, size):
+        population = []
+        for i in range(size):
+            genotypes = [phenotype.createGenotype(self.__randomGeneticID()) for phenotype in self.__phenotypes]
+            population.append(Genome(genotypes, self.__phenotypes))
+        return population
+
+    def __randomGeneticID(self):
         geneticID = "01"
-        while geneticID == "01": 
-            geneticID = "".join(r.choice(["0", "1"]) for i in range(2)) 
+        while geneticID == "01":
+            geneticID = "".join(r.choice(["0", "1"]) for i in range(2))
         return geneticID
-    
+
     def runSimulation(self, generations):
         for i in range(generations):
-            self.generation += 1
-            newPopulation = self.performGeneticAlgorithm()
-            self.updatePopulation(newPopulation)
-            self.collectData()
-            self.displayStatistics()
-        self.queryInit()
-        self.queryResults()
+            self.__generation += 1
+            newPopulation = self.__performGeneticAlgorithm()
+            self.__updatePopulation(newPopulation)
+            self.__collectData()
+            self.__displayStatistics()
+        self.__queryInit()
+        self.__queryResults()
 
-    def queryInit(self):
+    def __performGeneticAlgorithm(self):
+        newPopulation = []
+        populationSize = len(self.__population)
+
+        eliteCount = int(populationSize * self.__elitismRate)
+        sortedPopulation = sorted(
+            self.__population, key=self.__calculateFitness, reverse=True)
+        newPopulation.extend(sortedPopulation[:eliteCount])
+
+        fitnessSum = sum(self.__calculateFitness(g) for g in self.__population)
+        weights = [self.__calculateFitness(g)/fitnessSum if fitnessSum != 0 else 1/populationSize for g in self.__population]
+
+        for i in range(populationSize):
+            parents = r.choices(self.__population, weights=weights, k=2)
+            child = parents[0].crossover(parents[1])
+            self.__mutate(child)
+            newPopulation.append(child)
+
+        return newPopulation
+
+    def __mutate(self, genome):
+        for genotype in genome.getGenotypes():
+            newID = ""
+            for allele in genotype.getGeneticID():
+                if r.random() < self.__mutationRate:
+                    newID += "1" if allele == "0" else "0"
+                else:
+                    newID += allele
+            genotype.setGeneticID(Genome._normaliseID(newID))
+
+    def __calculateFitness(self, genome):
+        fitness = 0
+        traitWeights = {"Speed": 1.0, "Metabolism": 1.2, "Bravado": 1.5}
+        for i in range(len(genome.getGenotypes())):
+            geneticID = genome.getGenotypes()[i].getGeneticID()
+            fitness += int(geneticID, 2) * traitWeights.get(self.__phenotypes[i].getTrait(), 1.0)
+        return fitness
+
+    def __updatePopulation(self, newPopulation):
+        self.__population = newPopulation
+        survivalThreshold = 2
+        self.__population = [genome for genome in self.__population if self.__calculateFitness(
+            genome) > survivalThreshold]
+
+    def __collectData(self):
+        populationSize = len(self.__population)
+        totalFitness = sum(self.__calculateFitness(genome) for genome in self.__population)
+        averageFitness = totalFitness / populationSize if populationSize != 0 else 0
+
+        genotypeDistribution = {}
+        for genome in self.__population:
+            for genotype in genome.getGenotypes():
+                geneticID = genotype.getGeneticID()
+                genotypeDistribution[geneticID] = genotypeDistribution.get(geneticID, 0) + 1
+
+        phenotypeFrequency = {phenotype.getTrait(): {} for phenotype in self.__phenotypes}
+        for genome in self.__population:
+            for i in range(len(genome.getGenotypes())):
+                genotype = genome.getGenotypes()[i]
+                phenotype = self.__phenotypes[i]
+                trait = genotype.getTrait()
+                phenotypeFrequency[phenotype.getTrait()][trait] = phenotypeFrequency[phenotype.getTrait()].get(trait, 0) + 1
+
+        self.__data.append({"generation": self.__generation, "populationSize": populationSize, "averageFitness": averageFitness, "genotypeDistribution": genotypeDistribution, "phenotypeFrequency": phenotypeFrequency})
+
+    def __displayStatistics(self):
+        clear()
+        latestData = self.__data[-1]
+        print(f"Generation {self.__generation}:")
+        print(f"Population Size: {latestData['populationSize']}")
+        print(f"Average Fitness: {latestData['averageFitness']:.2f}")
+        print(f"Genotype Distribution: {latestData['genotypeDistribution']}")
+        print("Phenotype Frequency:")
+        for trait, frequencies in latestData['phenotypeFrequency'].items():
+            print(f" {trait}: {frequencies}")
+        continueText()
+
+    def __queryInit(self):
         clear()
         ans = input("Save initial parameters? (Y/N): ")
         while ans.upper() not in ["Y", "N"]:
             print("Please enter Y or N.")
             ans = input("Save initial parameters? (Y/N): ")
-        
+
         if ans.upper() == "Y":
-            self.saveInit()
+            self.__saveInit()
         continueText()
 
-    def saveInit(self):
-        with open(f"./Save/{self.simName}.evsm", mode="w", newline="") as file:
+    def __saveInit(self):
+        with open(f"./Save/{self.__simName}.evsm", mode="w", newline="") as file:
             writer = c.writer(file)
             writer.writerow(["Parameter", "Value"])
-            for key, value in self.parameters.items():
+            for key, value in self.__parameters.items():
                 writer.writerow([key, value])
-        print(f"Parameters saved to ./Save/{self.simName}.evsm")
+        print(f"Parameters saved to ./Save/{self.__simName}.evsm")
 
-    def queryResults(self):
+    def __queryResults(self):
         clear()
         ans = input("Save results? (Y/N): ")
         while ans.upper() not in ["Y", "N"]:
@@ -147,13 +281,14 @@ class Simulation:
             ans = input("Save initial parameters? (Y/N): ")
 
         if ans.upper() == "Y":
-            self.saveResults()
+            self.__saveResults()
         continueText()
 
-    def saveResults(self):
-        with open(f"./Results/results-{self.simName}-{d.today().strftime('%d-%m-%Y')}.txt", mode="w", newline="") as file:
-            file.write("Simulation Results\n")
-            for record in self.data:
+    def __saveResults(self):
+        filename = f"./Results/results-{self.__simName}-{d.today().strftime('%d-%m-%Y')}.txt"
+        with open(filename, mode="w", newline="") as file:
+            file.write("Simulation Results\n\n")
+            for record in self.__data:
                 file.write(f"Generation {record['generation']}:\n")
                 file.write(f"Population Size: {record['populationSize']}\n")
                 file.write(f"Average Fitness: {record['averageFitness']:.2f}\n")
@@ -161,108 +296,20 @@ class Simulation:
                 for trait, frequencies in record['phenotypeFrequency'].items():
                     file.write(f" {trait}: {frequencies}\n")
                 file.write("\n")
-        print(f"Results saved to ./Results/results-{self.simName}-{d.today().strftime('%d-%m-%Y')}.txt")
-    
-    def performGeneticAlgorithm(self):
-        newPopulation = []
-        populationSize = len(self.population)
-    
-        # Keep a percentage of the fittest entities
-        eliteCount = int(populationSize * self.elitismRate)
-        sortedPopulation = sorted(self.population, key=self.calculateFitness, reverse=True)
-        newPopulation.extend(sortedPopulation[:eliteCount])
-    
-        # Fitness based crossover
-        fitnessSum = sum(self.calculateFitness(genome) for genome in self.population)
+        print(f"Results saved to {filename}")
 
-        if fitnessSum == 0:
-            weights = [1.0 / populationSize] * populationSize
-        else:
-            weights = [self.calculateFitness(genome) / fitnessSum for genome in self.population]
-    
-        for i in range(populationSize):
-            parent1, parent2 = r.choices(self.population, weights=weights, k=2)
-            child = parent1.crossover(parent2)
-            self.mutate(child)
-            newPopulation.append(child)
-
-        return newPopulation
-
-    def mutate(self, genome):
-        for genotype in genome.genotypes:
-            newGeneticID = ""
-            for allele in genotype.geneticID:
-                if allele == "0" and r.random() < self.mutationRate:
-                    newGeneticID += "1"
-                elif allele == "1" and r.random() < self.mutationRate:
-                    newGeneticID += "0"
-                else:
-                    newGeneticID += allele
-            genotype.geneticID = genome.normaliseID(newGeneticID)
-
-    def calculateFitness(self, genome):
-        fitness = 0
-        traitWeights = {"Speed": 1.0, "Metabolism": 1.2, "Bravado": 1.5}
-        for i in range(len(genome.genotypes)):
-            fitness += int(genome.genotypes[i].geneticID, 2) * traitWeights.get(self.phenotypes[i].trait, 1.0)
-        return fitness
-
-    def updatePopulation(self, newPopulation):
-        self.population = newPopulation
-        survivalThreshold = 2
-        self.population = [genome for genome in self.population if self.calculateFitness(genome) > survivalThreshold]
-
-    def collectData(self):
-        populationSize = len(self.population)
-        totalFitness = sum(self.calculateFitness(genome) for genome in self.population)
-        averageFitness = totalFitness / populationSize
-            
-        genotypeDistribution = {}
-        for genome in self.population:
-            for genotype in genome.genotypes:
-                if genotype.geneticID in genotypeDistribution:
-                    genotypeDistribution[genotype.geneticID] += 1
-                else:
-                    genotypeDistribution[genotype.geneticID] = 1
-            
-        phenotypeFrequency = {phenotype.trait: {} for phenotype in self.phenotypes}
-        for genome in self.population:
-            for i in range(len(genome.genotypes)):
-                genotype = genome.genotypes[i]
-                phenotype = self.phenotypes[i]
-                trait = genotype.getTrait()
-                if trait not in phenotypeFrequency[phenotype.trait]:
-                    phenotypeFrequency[phenotype.trait][trait] = 0
-
-                phenotypeFrequency[phenotype.trait][trait] += 1
-
-        self.data.append({
-            "generation": self.generation,
-            "populationSize": populationSize,
-            "averageFitness": averageFitness,
-            "genotypeDistribution": genotypeDistribution,
-            "phenotypeFrequency": phenotypeFrequency
-        })
-
-    def displayStatistics(self):
-        clear()
-        latestData = self.data[-1]
-        print(f"Generation {self.generation}:")
-        print(f"Population Size: {latestData['populationSize']}")
-        print(f"Average Fitness: {latestData['averageFitness']:.2f}")
-        print(f"Genotype Distribution: {latestData['genotypeDistribution']}")
-        print(f"Phenotype Frequency:")
-        for trait, frequencies in latestData['phenotypeFrequency'].items():
-            print(f" {trait}: {frequencies}")
-        continueText()
-        
 
 class SimulationMenu:
     def __init__(self):
-        self.running = True
+        self.__running = True
+        self.__simName = ""
+        self.__mutationRate = 0.0
+        self.__elitismRate = 0.0
+        self.__initialPopulationSize = 0
+        self.__genNum = 0
 
     def displayMenu(self):
-        while self.running:
+        while self.__running:
             clear()
             print("EvoSim\n")
             print("1. Start Simulation")
@@ -271,94 +318,87 @@ class SimulationMenu:
             print("4. Learn")
             print("5. Exit")
             choice = input(">>> ")
-            self.handleChoice(choice)
+            self.__handleChoice(choice)
 
-    def handleChoice(self, choice: str):
-        match choice:
-            case "1":
-                self.startSimulation()
-            case "2":
-                self.loadSimulation()
-            case "3":
-                self.showTutorials()
-            case "4":
-                self.showLearn()
-            case "5":
-                self.exitProgram()
-            case _:
-                print("Please chose a number between 1 and 5.")
-                continueText()
+    def __handleChoice(self, choice):
+        if choice == "1":
+            self.__startSimulation()
+        elif choice == "2":
+            self.__loadSimulation()
+        elif choice == "3":
+            self.showTutorials()
+        elif choice == "4":
+            self.showLearn()
+        elif choice == "5":
+            self.exitProgram()
+        else:
+            print("Please choose a number between 1 and 5.")
+            continueText()
 
-    def startSimulation(self):
-        self.setParameters()
-        phenotypes = self.initialisePhenotypes()
-        simulation = Simulation(self.mutationRate, phenotypes, self.elitismRate, self.initialPopulationSize, self.simName, self.genNum)
-        self.displayInitialPopulation(simulation)
-        simulation.runSimulation(self.genNum)
+    def __startSimulation(self):
+        self.__setParameters()
+        phenotypes = self.__initialisePhenotypes()
+        simulation = Simulation(self.__mutationRate, phenotypes, self.__elitismRate, self.__initialPopulationSize, self.__simName, self.__genNum)
+        self.__displayInitialPopulation(simulation)
+        simulation.runSimulation(self.__genNum)
 
-
-    def setParameters(self):
+    def __setParameters(self):
         clear()
         print("Set Simulation Parameters:")
-        self.simName = input("Enter simulation name (e.g: example1): ")
-        self.mutationRate = self.getFloatInput("Enter mutation rate (e.g: 0.01): ", 0, 1)
-        self.elitismRate = self.getFloatInput("Enter elitism rate (e.g: 0.4): ", 0, 1)
-        self.initialPopulationSize = self.getIntInput("Enter initial population size (e.g: 6): ", 2, 12)
-        self.genNum = self.getIntInput("Enter number of generations (e.g: 4): ", 1, 9)
+        self.__simName = input("Enter simulation name (e.g: example1): ")
+        self.__mutationRate = self.__getFloatInput("Enter mutation rate (e.g: 0.01): ", 0.0, 1.0)
+        self.__elitismRate = self.__getFloatInput("Enter elitism rate (e.g: 0.4): ", 0.0, 1.0)
+        self.__initialPopulationSize = self.__getIntInput("Enter initial population size (e.g: 12): ", 2, 20)
+        self.__genNum = self.__getIntInput("Enter number of generations (e.g: 7): ", 1, 14)
         continueText()
-    
-    def getFloatInput(self, prompt, minValue, maxValue):
+
+    def __getFloatInput(self, prompt, minValue, maxValue):
         while True:
             try:
                 value = float(input(prompt))
-                if minValue is not None and (value < minValue or value > maxValue):
-                    print(f"Please enter a float between {minValue} and {maxValue}.")
-                else:
+                if minValue <= value <= maxValue:
                     return value
+                print(f"Please enter a value between {minValue} and {maxValue}.")
             except ValueError:
-                print(f"Please enter a float between {minValue} and {maxValue}.")
-    
-    def getIntInput(self, prompt, minValue, maxValue):
+                print("Invalid input. Please enter a number.")
+
+    def __getIntInput(self, prompt, minValue, maxValue):
         while True:
             try:
                 value = int(input(prompt))
-                if minValue is not None and (value < minValue or value > maxValue):
-                    print(f"Please enter a float between {minValue} and {maxValue}.")
-                else:
+                if minValue <= value <= maxValue:
                     return value
+                print(f"Please enter an integer between {minValue} and {maxValue}.")
             except ValueError:
-                print(f"Please enter a float between {minValue} and {maxValue}.")
+                print("Invalid input. Please enter an integer.")
 
-    def initialisePhenotypes(self):
-        speed = Phenotype("Speed", "s", ["Slow", "Fast"]) 
-        metabolism = Phenotype("Metabolism", "m", ["Slow Metabolism", "Fast Metabolism"]) 
+    def __initialisePhenotypes(self):
+        speed = Phenotype("Speed", "s", ["Slow", "Fast"])
+        metabolism = Phenotype("Metabolism", "m", ["Slow Metabolism", "Fast Metabolism"])
         bravado = Phenotype("Bravado", "b", ["Timid", "Courageous"])
         return [speed, metabolism, bravado]
 
-    def displayInitialPopulation(self, simulation):
+    def __displayInitialPopulation(self, simulation):
         clear()
         print("Initial Population:")
-        for genome in simulation.population:
+        for genome in simulation.getPopulation():
             genome.display()
             print()
         continueText()
 
-    def loadParametersFromCSV(self, filename):
+    def __loadParametersFromCSV(self, filename):
         parameters = {}
         with open(filename, mode="r") as file:
             reader = c.reader(file)
-            next(reader)  # Skip the header
+            next(reader)
             for row in reader:
                 parameters[row[0]] = row[1]
         return parameters
 
-    def loadSimulation(self):
+    def __loadSimulation(self):
         clear()
         print("Load Simulation")
-        
-        # List all .evsm files in the Load folder
         files = [f for f in o.listdir("./Load") if f.endswith(".evsm")]
-        
         if not files:
             print("No .evsm files found in the Load folder.")
             continueText()
@@ -369,23 +409,22 @@ class SimulationMenu:
         for file in files:
             print(f"{i}. {file}")
             i += 1
-        
-        choice = self.getIntInput("Enter the number of the file you want to load: ", 1, len(files))
+
+        choice = self.__getIntInput("Enter file number to load: ", 1, len(files))
         filename = files[choice - 1]
         filepath = f"./Load/{filename}"
 
-        parameters = self.loadParametersFromCSV(filepath)
-        
-        self.simName = filename.split(".")[0]
-        self.mutationRate = float(parameters["Mutation Rate"])
-        self.elitismRate = float(parameters["Elitism Rate"])
-        self.initialPopulationSize = int(parameters["Initial Population Size"])
-        self.genNum = int(parameters["Number of Generations"])
+        parameters = self.__loadParametersFromCSV(filepath)
+        self.__mutationRate = float(parameters["mutationRate"])
+        self.__elitismRate = float(parameters["elitismRate"])
+        self.__initialPopulationSize = int(parameters["initialPopulationSize"])
+        self.__genNum = int(parameters["genNum"])
+        self.__simName = filename.split(".")[0]
 
-        phenotypes = self.initialisePhenotypes()
-        simulation = Simulation(self.mutationRate, phenotypes, self.elitismRate, self.initialPopulationSize, self.simName, self.genNum)
-        self.displayInitialPopulation(simulation)
-        simulation.runSimulation(self.genNum)
+        phenotypes = self.__initialisePhenotypes()
+        simulation = Simulation(self.__mutationRate, phenotypes, self.__elitismRate, self.__initialPopulationSize, self.__simName, self.__genNum)
+        self.__displayInitialPopulation(simulation)
+        simulation.runSimulation(self.__genNum)
 
     def showTutorials(self):
         clear()
@@ -400,9 +439,10 @@ class SimulationMenu:
     def exitProgram(self):
         clear()
         print("Exiting...")
-        self.running = False
+        self.__running = False
+
 
 if __name__ == "__main__":
     createFolders()
-    menu = SimulationMenu() 
+    menu = SimulationMenu()
     menu.displayMenu()
