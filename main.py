@@ -402,7 +402,6 @@ class SimulationMenu:
         if not files:
             print("No .evsm files found in the Load folder.")
             continueText()
-            return
 
         print("Available .evsm files:")
         i = 1
