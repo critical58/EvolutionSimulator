@@ -433,6 +433,7 @@ class SimulationMenu:
     def showLearn(self):
         clear()
         print("Learn:")
+        print("The predominant current-day meaning of genotype is some relevant part of the DNA passed to the organism by its parents. The phenotype is the physical and behavioral traits of the organism, for example, size and shape, metabolic activities, and patterns of movement. The distinction between them is especially important in evolutionary theory, where the survival and mating of organisms depends on their traits, but it is the DNA, held to be unaffected by the development of the traits over the life course, that is transmitted to the next generation.")
         continueText()
 
     def exitProgram(self):
